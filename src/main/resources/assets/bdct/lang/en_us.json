@@ -1,0 +1,10 @@
+{
+  "tooltip.bdct.show_tags": "Hold %s to show tags",
+  "tooltip.bdct.show_components": "Hold %s to show components",
+  "key.category.bdct": "Better Data Component Tooltip",
+  "key.bdct.show_tags": "Show Tags",
+  "key.bdct.show_components": "Show Data Components",
+  "bdct.configuration.page_size": "Page Size",
+  "bdct.configuration.component_blacklist": "Component Blacklist",
+  "bdct.configuration.show_original_text": "Show Original Text"
+}
