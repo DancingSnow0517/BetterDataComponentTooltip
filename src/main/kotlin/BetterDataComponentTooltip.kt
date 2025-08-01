@@ -9,6 +9,7 @@ import net.minecraft.core.component.DataComponentType
 import net.minecraft.core.component.TypedDataComponent
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
+import net.minecraft.nbt.ListTag
 import net.minecraft.nbt.NbtOps
 import net.minecraft.nbt.NbtUtils
 import net.minecraft.nbt.StringTag
@@ -20,6 +21,7 @@ import net.minecraft.tags.TagKey
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.component.ItemContainerContents
+import net.minecraft.world.item.component.ItemLore
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -113,14 +115,38 @@ object BetterDataComponentTooltip {
                     result.ifSuccess { tag ->
                         when (value) {
                             is Component -> {
-                                val component = Component.empty()
+                                val c = Component.empty()
                                     .append(Component.literal("$typeKey: ").withColor(0xFF99FF))
                                     .append(value)
                                 if (Config.showOriginalText && tag is StringTag) {
-                                    component.append(" / ")
-                                    component.append(Component.literal(tag.asString).withStyle(ChatFormatting.GRAY))
+                                    c.append(" / ")
+                                    c.append(Component.literal(tag.asString).withStyle(ChatFormatting.GRAY))
                                 }
-                                ComponentTooltipContext.cachedComponents.add(component)
+                                ComponentTooltipContext.cachedComponents.add(c)
+                            }
+
+                            is ItemLore -> {
+                                if (value.lines.isEmpty()) {
+                                    ComponentTooltipContext.cachedComponents.add(
+                                        Component.empty()
+                                            .append(Component.literal("$typeKey: ").withColor(0xFF99FF))
+                                            .append("[]")
+                                    )
+                                } else {
+                                    ComponentTooltipContext.cachedComponents.add(
+                                        Component.literal("$typeKey: ").withColor(0xFF99FF)
+                                    )
+                                }
+                                for ((index, line) in value.lines.withIndex()) {
+                                    val c = Component.empty()
+                                        .append(Component.literal("  - ").withColor(0xFF99FF))
+                                        .append(line)
+                                    if (Config.showOriginalText && tag is ListTag) {
+                                        c.append(" / ")
+                                        c.append(Component.literal(tag.getString(index)).withStyle(ChatFormatting.GRAY))
+                                    }
+                                    ComponentTooltipContext.cachedComponents.add(c)
+                                }
                             }
 
                             is ItemContainerContents -> {
@@ -218,12 +244,37 @@ object BetterDataComponentTooltip {
             val result = codec!!.encodeStart(NbtOps.INSTANCE, value)
             result.ifSuccess { tag: Tag ->
                 when (value) {
-                    is Component -> ComponentTooltipContext.cachedComponents.add(
-                        Component.empty()
+                    is Component -> {
+                        val c = Component.empty()
                             .append(StringUtils.repeat(' ', spaceCount))
                             .append(Component.literal("$typeKey: ").withColor(0xFF99FF))
                             .append(value)
-                    )
+                        if (Config.showOriginalText && tag is StringTag) {
+                            c.append(" / ")
+                            c.append(Component.literal(tag.asString).withStyle(ChatFormatting.GRAY))
+                        }
+                        ComponentTooltipContext.cachedComponents.add(c)
+                    }
+
+                    is ItemLore -> {
+                        ComponentTooltipContext.cachedComponents.add(
+                            Component.empty()
+                                .append(StringUtils.repeat(' ', spaceCount))
+                                .append(Component.literal("$typeKey: ").withColor(0xFF99FF))
+                                .append(if (value.lines.isEmpty()) "[]" else "")
+                        )
+                        for ((index, line) in value.lines.withIndex()) {
+                            val c = Component.empty()
+                                .append(StringUtils.repeat(' ', spaceCount))
+                                .append(Component.literal("  - ").withColor(0xFF99FF))
+                                .append(line)
+                            if (Config.showOriginalText && tag is ListTag) {
+                                c.append(" / ")
+                                c.append(Component.literal(tag.getString(index)).withStyle(ChatFormatting.GRAY))
+                            }
+                            ComponentTooltipContext.cachedComponents.add(c)
+                        }
+                    }
 
                     is ItemContainerContents -> {
                         ComponentTooltipContext.cachedComponents.add(
