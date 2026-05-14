@@ -1,7 +1,7 @@
 package cn.dancingsnow.bdct
 
 import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -19,7 +19,7 @@ object Config {
         .defineList("component_blacklist", listOf("minecraft:rarity"), { "minecraft:rarity" }) {
             if (it is String) {
                 return@defineList runCatching {
-                    BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(ResourceLocation.parse(it))
+                    BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Identifier.parse(it))
                         ?: return@defineList false
                 }.isSuccess
             }

@@ -15,8 +15,8 @@ import net.minecraft.nbt.NbtUtils
 import net.minecraft.nbt.StringTag
 import net.minecraft.nbt.Tag
 import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
 import net.minecraft.resources.ResourceKey
-import net.minecraft.resources.ResourceLocation
 import net.minecraft.tags.TagKey
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
@@ -37,6 +37,7 @@ import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent
 import org.apache.commons.lang3.StringUtils
 import thedarkcolour.kotlinforforge.neoforge.forge.LOADING_CONTEXT
 import java.util.function.Consumer
+import kotlin.jvm.optionals.getOrElse
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -44,19 +45,20 @@ import kotlin.math.max
 @EventBusSubscriber
 object BetterDataComponentTooltip {
     const val MODID: String = "bdct"
+    val CATEGORY = KeyMapping.Category(Identifier.fromNamespaceAndPath(MODID, "bdct"))
     val SHOW_TAGS: KeyMapping = KeyMapping(
         "key.bdct.show_tags",
         KeyConflictContext.GUI,
         InputConstants.Type.KEYSYM,
         InputConstants.KEY_LCONTROL,
-        "key.category.bdct"
+        CATEGORY
     )
     val SHOW_COMPONENTS: KeyMapping = KeyMapping(
         "key.bdct.show_components",
         KeyConflictContext.GUI,
         InputConstants.Type.KEYSYM,
         InputConstants.KEY_LALT,
-        "key.category.bdct"
+        CATEGORY
     )
     val HOLD_TO_SHOW_TAGS: Component = Component.translatable(
         "tooltip.bdct.show_tags",
@@ -80,8 +82,7 @@ object BetterDataComponentTooltip {
 
     @SubscribeEvent
     fun onShowTooltip(event: ItemTooltipEvent) {
-        val player = Minecraft.getInstance().player
-        if (player == null) return
+        val player = Minecraft.getInstance().player ?: return
         val toolTip = event.toolTip
         val itemStack = event.itemStack
         val key = BuiltInRegistries.ITEM.getKey(itemStack.getItem())
@@ -89,10 +90,8 @@ object BetterDataComponentTooltip {
             player.connection.registryAccess().holderOrThrow(ResourceKey.create(Registries.ITEM, key))
         if (isKeyDown(SHOW_TAGS)) {
             holder.tags().map { obj: TagKey<Item> -> obj.location() }.sorted()
-                .forEach { rl: ResourceLocation? ->
-                    toolTip.add(
-                        Component.literal("#$rl").withStyle(ChatFormatting.GRAY)
-                    )
+                .forEach { rl ->
+                    toolTip.add(Component.literal("#$rl").withStyle(ChatFormatting.GRAY))
                 }
         } else {
             toolTip.add(HOLD_TO_SHOW_TAGS)
@@ -103,7 +102,7 @@ object BetterDataComponentTooltip {
                 ComponentTooltipContext.hash = code
                 ComponentTooltipContext.page = 1
                 ComponentTooltipContext.cachedComponents.clear()
-                itemStack.getComponents().forEach { component: TypedDataComponent<*>? ->
+                itemStack.components.forEach { component: TypedDataComponent<*>? ->
                     val componentType: DataComponentType<*> = component!!.type()
                     val typeKey = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(componentType)
                     if (Config.componentBlacklist.contains(typeKey.toString())) {
@@ -120,7 +119,10 @@ object BetterDataComponentTooltip {
                                     .append(value)
                                 if (Config.showOriginalText && tag is StringTag) {
                                     c.append(" / ")
-                                    c.append(Component.literal(tag.asString).withStyle(ChatFormatting.GRAY))
+                                    c.append(
+                                        Component.literal(tag.asString().getOrElse { "" })
+                                            .withStyle(ChatFormatting.GRAY)
+                                    )
                                 }
                                 ComponentTooltipContext.cachedComponents.add(c)
                             }
@@ -143,7 +145,7 @@ object BetterDataComponentTooltip {
                                         .append(line)
                                     if (Config.showOriginalText && tag is ListTag) {
                                         c.append(" / ")
-                                        c.append(Component.literal(tag.getString(index)).withStyle(ChatFormatting.GRAY))
+                                        c.append(Component.literal(tag.getString(index).getOrElse { "" }).withStyle(ChatFormatting.GRAY))
                                     }
                                     ComponentTooltipContext.cachedComponents.add(c)
                                 }
@@ -154,7 +156,7 @@ object BetterDataComponentTooltip {
                                     Component.literal("$typeKey: ").withColor(0xFF99FF)
                                 )
                                 for (stack in value.nonEmptyItems()) {
-                                    addComponentsTooltip(2, stack)
+                                    addComponentsTooltip(2, stack.create())
                                 }
                             }
 
@@ -214,7 +216,7 @@ object BetterDataComponentTooltip {
 
     private fun isKeyDown(keyMapping: KeyMapping): Boolean {
         return InputConstants.isKeyDown(
-            Minecraft.getInstance().window.window,
+            Minecraft.getInstance().window,
             keyMapping.key.value
         )
     }
@@ -236,7 +238,7 @@ object BetterDataComponentTooltip {
                 .append(key.toString())
         )
 
-        itemStack.getComponents().forEach(Consumer { component: TypedDataComponent<*>? ->
+        itemStack.components.forEach(Consumer { component: TypedDataComponent<*>? ->
             val componentType: DataComponentType<*> = component!!.type()
             val typeKey = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(componentType)
             val value: Any = component.value()
@@ -251,7 +253,7 @@ object BetterDataComponentTooltip {
                             .append(value)
                         if (Config.showOriginalText && tag is StringTag) {
                             c.append(" / ")
-                            c.append(Component.literal(tag.asString).withStyle(ChatFormatting.GRAY))
+                            c.append(Component.literal(tag.asString().getOrElse { "" }).withStyle(ChatFormatting.GRAY))
                         }
                         ComponentTooltipContext.cachedComponents.add(c)
                     }
@@ -270,7 +272,7 @@ object BetterDataComponentTooltip {
                                 .append(line)
                             if (Config.showOriginalText && tag is ListTag) {
                                 c.append(" / ")
-                                c.append(Component.literal(tag.getString(index)).withStyle(ChatFormatting.GRAY))
+                                c.append(Component.literal(tag.getString(index).getOrElse { "" }).withStyle(ChatFormatting.GRAY))
                             }
                             ComponentTooltipContext.cachedComponents.add(c)
                         }
@@ -283,7 +285,7 @@ object BetterDataComponentTooltip {
                                 .append(Component.literal("$typeKey: ").withColor(0xFF99FF))
                         )
                         for (stack in value.nonEmptyItems()) {
-                            addComponentsTooltip(indent + 4, stack)
+                            addComponentsTooltip(indent + 4, stack.create())
                         }
                     }
 
