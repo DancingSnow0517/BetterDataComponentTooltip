@@ -2,6 +2,7 @@ package cn.dancingsnow.bdct
 
 import com.mojang.blaze3d.platform.InputConstants
 import com.mojang.serialization.Codec
+import com.mojang.serialization.JsonOps
 import net.minecraft.ChatFormatting
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
@@ -12,7 +13,6 @@ import net.minecraft.core.registries.Registries
 import net.minecraft.nbt.ListTag
 import net.minecraft.nbt.NbtOps
 import net.minecraft.nbt.NbtUtils
-import net.minecraft.nbt.StringTag
 import net.minecraft.nbt.Tag
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
@@ -37,7 +37,6 @@ import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent
 import org.apache.commons.lang3.StringUtils
 import thedarkcolour.kotlinforforge.neoforge.forge.LOADING_CONTEXT
 import java.util.function.Consumer
-import kotlin.jvm.optionals.getOrElse
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -117,10 +116,10 @@ object BetterDataComponentTooltip {
                                 val c = Component.empty()
                                     .append(Component.literal("$typeKey: ").withColor(0xFF99FF))
                                     .append(value)
-                                if (Config.showOriginalText && tag is StringTag) {
+                                if (Config.showOriginalText) {
                                     c.append(" / ")
                                     c.append(
-                                        Component.literal(tag.asString().getOrElse { "" })
+                                        Component.literal(tag.toJsonString())
                                             .withStyle(ChatFormatting.GRAY)
                                     )
                                 }
@@ -145,7 +144,7 @@ object BetterDataComponentTooltip {
                                         .append(line)
                                     if (Config.showOriginalText && tag is ListTag) {
                                         c.append(" / ")
-                                        c.append(Component.literal(tag.getString(index).getOrElse { "" }).withStyle(ChatFormatting.GRAY))
+                                        c.append(Component.literal(tag.get(index).toJsonString()).withStyle(ChatFormatting.GRAY))
                                     }
                                     ComponentTooltipContext.cachedComponents.add(c)
                                 }
@@ -221,6 +220,13 @@ object BetterDataComponentTooltip {
         )
     }
 
+    /**
+     * 将数据组件编码后的 NBT 标签转为 JSON 字符串。
+     * 文本组件在新版编码器下会折叠为字符串或展开为结构体，
+     * 统一经 JsonOps 转换以展示其 JSON 形态。
+     */
+    private fun Tag.toJsonString(): String = NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE, this).toString()
+
     private fun addComponentsTooltip(indent: Int, itemStack: ItemStack) {
         val mc = Minecraft.getInstance()
         val font = mc.font
@@ -251,9 +257,9 @@ object BetterDataComponentTooltip {
                             .append(StringUtils.repeat(' ', spaceCount))
                             .append(Component.literal("$typeKey: ").withColor(0xFF99FF))
                             .append(value)
-                        if (Config.showOriginalText && tag is StringTag) {
+                        if (Config.showOriginalText) {
                             c.append(" / ")
-                            c.append(Component.literal(tag.asString().getOrElse { "" }).withStyle(ChatFormatting.GRAY))
+                            c.append(Component.literal(tag.toJsonString()).withStyle(ChatFormatting.GRAY))
                         }
                         ComponentTooltipContext.cachedComponents.add(c)
                     }
@@ -272,7 +278,7 @@ object BetterDataComponentTooltip {
                                 .append(line)
                             if (Config.showOriginalText && tag is ListTag) {
                                 c.append(" / ")
-                                c.append(Component.literal(tag.getString(index).getOrElse { "" }).withStyle(ChatFormatting.GRAY))
+                                c.append(Component.literal(tag.get(index).toJsonString()).withStyle(ChatFormatting.GRAY))
                             }
                             ComponentTooltipContext.cachedComponents.add(c)
                         }
